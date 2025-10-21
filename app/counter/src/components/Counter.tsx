@@ -4,14 +4,15 @@ import * as React from "react";
 
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useSolanaProvider } from "@/hooks/solana-provider";
-import { getCounterPda } from "@/lib/utils";
+import { getCounterPda, programId } from "@/lib/utils";
 import { Program } from "@coral-xyz/anchor";
 import { Button } from "./ui/button";
 import { SlidingNumber } from "./ui/shadcn-io/sliding-number";
 
 import { SolanaProgram } from "@/utils/solana_program";
 import idl from "@/utils/solana_program.json";
-import { SystemProgram } from "@solana/web3.js";
+import { SystemProgram, Transaction } from "@solana/web3.js";
+import { createMemoInstruction } from "@solana/spl-memo";
 
 export default function CounterComponent() {
   const [number, setNumber] = React.useState(0);
@@ -103,14 +104,22 @@ export default function CounterComponent() {
       const newCount = number + 1;
 
       console.log("Updating counter to:", newCount);
-      const sig = await program.methods
+      const updateTx = await program.methods
         .updateCounter(newCount)
         .accounts({
           signer: publicKey,
           counter: counterPda,
           systemProgram: SystemProgram.programId,
         })
-        .rpc();
+        .instruction();
+
+      const memoTx = createMemoInstruction(
+        `CounterUpdated:${programId.toString()}`
+      );
+
+      const tx = new Transaction().add(updateTx).add(memoTx);
+      const sig = await provider.sendAndConfirm(tx);
+
       console.log("Counter updated with signature:", sig);
 
       // Fetch the updated counter
