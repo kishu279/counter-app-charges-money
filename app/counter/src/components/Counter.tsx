@@ -11,6 +11,7 @@ import { SlidingNumber } from "./ui/shadcn-io/sliding-number";
 
 import { SolanaProgram } from "@/utils/solana_program";
 import idl from "@/utils/solana_program.json";
+import { SystemProgram } from "@solana/web3.js";
 
 export default function CounterComponent() {
   const [number, setNumber] = React.useState(0);
@@ -62,12 +63,20 @@ export default function CounterComponent() {
     }
 
     const program = new Program<SolanaProgram>(idl as any, provider);
+    const counterPda = getCounterPda(publicKey);
 
     try {
       setIsLoading(true);
 
       console.log("Initializing counter");
-      const sig = await program.methods.initializeCounter().rpc();
+      const sig = await program.methods
+        .initializeCounter()
+        .accounts({
+          signer: publicKey,
+          new_counter: counterPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
       console.log("Counter initialized with signature:", sig);
 
       // Fetch the updated counter
@@ -87,13 +96,21 @@ export default function CounterComponent() {
     }
 
     const program = new Program<SolanaProgram>(idl as any, provider);
+    const counterPda = getCounterPda(publicKey);
 
     try {
       setIsLoading(true);
       const newCount = number + 1;
 
       console.log("Updating counter to:", newCount);
-      const sig = await program.methods.updateCounter(newCount).rpc();
+      const sig = await program.methods
+        .updateCounter(newCount)
+        .accounts({
+          signer: publicKey,
+          counter: counterPda,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
       console.log("Counter updated with signature:", sig);
 
       // Fetch the updated counter
