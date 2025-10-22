@@ -92,7 +92,7 @@ export function WalletButton() {
                   key={idx}
                   onClick={connectWallet(item.adapter)}
                   className="cursor-pointer"
-                sh>
+                >
                   <Image
                     src={item.adapter.icon}
                     width={20}

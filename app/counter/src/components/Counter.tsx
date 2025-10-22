@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState, useCallback } from "react";
 
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { useSolanaProvider } from "@/hooks/solana-provider";
 import { getCounterPda, programId } from "@/lib/utils";
 import { Program } from "@coral-xyz/anchor";
@@ -15,22 +15,22 @@ import { SystemProgram, Transaction } from "@solana/web3.js";
 import { createMemoInstruction } from "@solana/spl-memo";
 
 export default function CounterComponent() {
-  const [number, setNumber] = React.useState(0);
-  const [isInitialized, setIsInitialized] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [number, setNumber] = useState(0);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const { publicKey, connected } = useWallet();
-  const { connection } = useConnection();
   const provider = useSolanaProvider();
 
   // Fetch counter value on initial render
-  const fetchCounter = React.useCallback(async () => {
+  const fetchCounter = useCallback(async () => {
     if (!provider || !publicKey) {
       setIsInitialized(false);
       setNumber(0);
       return;
     }
 
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     const program = new Program<SolanaProgram>(idl as any, provider);
 
     try {
@@ -46,14 +46,14 @@ export default function CounterComponent() {
       }
     } catch (error) {
       // Counter account doesn't exist yet
-      console.log("Counter not initialized yet");
+      console.log("Counter not initialized yet", error);
       setIsInitialized(false);
       setNumber(0);
     }
   }, [provider, publicKey]);
 
   // Fetch counter on mount and when wallet/provider changes
-  React.useEffect(() => {
+  useEffect(() => {
     fetchCounter();
   }, [fetchCounter]);
 
@@ -74,6 +74,7 @@ export default function CounterComponent() {
         .initializeCounter()
         .accounts({
           signer: publicKey,
+          // @ts-expect-error: 'new_counter' is valid per our Anchor IDL
           new_counter: counterPda,
           systemProgram: SystemProgram.programId,
         })
@@ -108,6 +109,7 @@ export default function CounterComponent() {
         .updateCounter(newCount)
         .accounts({
           signer: publicKey,
+          // @ts-expect-error: counter is valid per our Anchor IDL
           counter: counterPda,
           systemProgram: SystemProgram.programId,
         })
@@ -118,6 +120,7 @@ export default function CounterComponent() {
       );
 
       const tx = new Transaction().add(updateTx).add(memoTx);
+      // @ts-expect-error: provider is valid per our useSolanaProvider hook
       const sig = await provider.sendAndConfirm(tx);
 
       console.log("Counter updated with signature:", sig);
